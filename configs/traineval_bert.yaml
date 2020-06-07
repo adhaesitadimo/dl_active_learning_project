@@ -3,9 +3,11 @@ hydra:
   run:
     dir: ${output_dir}/${now:%Y-%m-%d}/${now:%H-%M-%S}
 model:
-    model_type: 'bert'
-    bs: 64
-    ebs: 64
+    model_type: 'transformers'
+    tokenizer: 'bert-base-cased'
+    classifier: 'bert-base-cased'
+    bs: 8
+    ebs: 8
     n_epochs: 20
     sched: 'plateau'
     max_len: 150
@@ -13,13 +15,13 @@ model:
     patience: 1
     cache_dir: '../workdir/cache'
     mixout: false
-    tokenizer: 'bert-base-cased'
     bayes: false
     bayes_type: 'mcd_all_layers'
 data:
     data_folder: '../data/'
     task: 'conll2003'
     tag_column: 3
+    downsample_perc: 1
 al:
     strat_name: 'uncertainty'
     n_iterations: 50

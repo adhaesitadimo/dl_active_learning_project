@@ -17,3 +17,4 @@ flair
 allennlp==1.0.0rc5
 allennlp-models==1.0.0rc5
 nltk
+fire

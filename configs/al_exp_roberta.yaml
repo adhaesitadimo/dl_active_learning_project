@@ -1,23 +1,22 @@
 cuda_devices: ''
-name: 'genia'
+name: 'conll'
 hydra:
   run:
     dir: ../workdir/results/al/${now:%Y-%m-%d}/${now:%H-%M-%S}
 model:
-    model_type: 'flair'
-    emb_name: 'fasttext+en'
-    hidden_size: 128
-    lr: 0.1
-    bs: 32
-    ebs: 300
+    model_type: 'transformers'
+    tokenizer: 'roberta-base'
+    classifier: 'roberta-base'
     patience: 2
-    n_epochs: 20
+    n_epochs: 10
+    lr: 8e-5
+    bs: 64
+    ebs: 64
     valid_ratio: 0.25
     anneal_factor: 0.5
-    bayes: False
+    bayes: True
     bayes_type: 'mcd_all_layers'
     cache_dir: '../workdir/cache'
-    min_lr: 1e-7
     smallest_lr: 1e-7
 data:
     data_folder: '../data/'
@@ -25,10 +24,10 @@ data:
     tag_column: 3
 al:
     strat_name: 'uncertainty'
-    n_iterations: 25
-    max_samples_number: 30
-    percent: false
+    n_iterations: 50
+    max_samples_number: 100
+    percent: False
 n_repeats: 5
 n_processes: 2
-cache_dir: '../workdir/cache'
 exp_path: '../workdir/experiments/hydra_debug'
+cache_dir: '../workdir/cache'

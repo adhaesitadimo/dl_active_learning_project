@@ -2,7 +2,7 @@ import flair
 from flair.embeddings import WordEmbeddings, ELMoEmbeddings, StackedEmbeddings
 from flair.models import SequenceTagger
 #from flair.trainers import ModelTrainer
-from trainer_flair import ModelTrainer as ModelTrainerFlair
+from al4ner.trainer_flair import ModelTrainer as ModelTrainerFlair
 from flair.training_utils import EvaluationMetric
 from flair.data import Dictionary
 from flair.datasets import ColumnCorpus    
@@ -15,7 +15,6 @@ import gc
 import hydra
 
 from al4ner.exp_utils import tokenize_row, entity_level_f1, train_dev_test_distr
-from al4ner.mixout_bert import replace_dropout_with_mixout
 
 from vadim_ml.io import dump_file
 
@@ -65,11 +64,6 @@ def train_eval_bert(corpus, res_dir, model_name, cfg_model):
                                                do_lower_case=('uncasaed' in cfg_model.tokenizer))
 
     w_decay = 0.01
-    if cfg_model.mixout > 0:
-        print('Replacing dropout with mixout')
-        replace_dropout_with_mixout(model, lmbd=cfg_model.mixout)
-        w_decay = 0.
-            
     model = model.cuda()
 
     seq_tagger = SequenceTaggerBert(bert_model=model, bpe_tokenizer=tokenizer, 
@@ -165,13 +159,13 @@ def run_task(task):
     os.chdir(hydra.utils.get_original_cwd())
     
     result_path = auto_generated_dir
-    pathology = task.data.pathology
+    pathology = task.data.task
     data_folder = task.data.data_folder
     
     corpus = load_corpus(data_folder, task.data.tag_column, 
                          pathology, task.data.downsample_perc)
     
-    for i in range(task.number_of_repeat):
+    for i in range(task.n_repeats):
         print(f'Repeating: #{i}')
         
         model_folder = f'{result_path}/{i}'

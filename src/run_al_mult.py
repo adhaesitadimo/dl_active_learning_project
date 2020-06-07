@@ -3,8 +3,10 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 import itertools
 import os
+import multiprocessing
 from pathlib import Path
 
+import time
 import flair
 import hydra
 import nltk
@@ -13,11 +15,6 @@ import pandas as pd
 import torch
 
 from actleto import ActiveLearner, make_libact_strategy_ctor
-
-from bert_sequence_tagger import (BertForTokenClassificationCustom,
-                                  ModelTrainerBert, SequenceTaggerBert)
-from bert_sequence_tagger.bert_utils import get_parameters_without_decay
-from bert_sequence_tagger.metrics import f1_entity_level
 
 from al4ner.auto_sequence_tagger import SequenceTaggerAuto, AutoModelForTokenClassificationCustom, ModelTrainerAuto
 from al4ner.auto_sequence_tagger.auto_utils import get_parameters_without_decay
@@ -240,7 +237,7 @@ def create_libact_adaptor(tag2index, index2tag, adaptor_type, *args, **kwargs):
                         string_input=False)
 
 
-def run_experiment(config):
+def run_experiment(config, repeat=1):
     print('Active learning strategy:', config.al.strat_name)
 
     print('Loading task...', config.data.task)
@@ -255,58 +252,57 @@ def run_experiment(config):
     strat = strategies_to_try(config.al.strat_name)
     model_name = config.model.model_type
 
-    for repeat in range(config.n_repeats):
-        print(f'######################==Repeat {repeat} ==#####################')
+    print(f'######################==Repeat {repeat} ==#####################')
 
-        strat = strategies_to_try(config.al.strat_name)
+    strat = strategies_to_try(config.al.strat_name)
 
-        model_name = config.model.model_type
+    model_name = config.model.model_type
         
-        if config.al.percent:
-            percent = 0.02
-            print('FULL:', len(y_train))
-            y_seed = y_train2y_seed_percent(y_train, percent, rpt=repeat)
-            selector = [False for _ in range(len(y_seed))]
-            for ind, answ in enumerate(y_seed):
-                if answ is None:
-                    selector[ind] = False
-                elif all(e is None for e in y_seed):
-                    selector[ind] = False
-                else:
-                    selector[ind] = True
+    if config.al.percent:
+        percent = 0.02
+        print('FULL:', len(y_train))
+        y_seed = y_train2y_seed_percent(y_train, percent, rpt=repeat)
+        selector = [False for _ in range(len(y_seed))]
+        for ind, answ in enumerate(y_seed):
+            if answ is None:
+                selector[ind] = False
+            elif all(e is None for e in y_seed):
+                selector[ind] = False
+            else:
+                selector[ind] = True
 
-            y_nonempty = np.array(y_seed)[selector]
-            print('2PERCENT:', len(y_nonempty))
-            max_samples_number = int(len(y_seed) * percent)
-        else:
-            y_seed = y_train2y_seed(y_train, rpt=repeat)
-            max_samples_number = config.al.max_samples_number
+        y_nonempty = np.array(y_seed)[selector]
+        print('2PERCENT:', len(y_nonempty))
+        max_samples_number = int(len(y_seed) * percent)
+    else:
+        y_seed = y_train2y_seed(y_train, rpt=repeat)
+        max_samples_number = config.al.max_samples_number
 
 
-        if 'flair' in config.model.model_type:
-            print(config.model.model_type)
+    if 'flair' in config.model.model_type:
+        print(config.model.model_type)
             
-            bayes_type = config.model.bayes_type if config.model.bayes else 'no_bayes'
-            models_path = os.path.join(config.exp_path, f'{model_name}_{config.model.emb_name}_{bayes_type}/{config.al.strat_name}')
-            os.makedirs(models_path, exist_ok=True)
+        bayes_type = config.model.bayes_type if config.model.bayes else 'no_bayes'
+        models_path = os.path.join(config.exp_path, f'{model_name}_{config.model.emb_name}_{bayes_type}/{config.al.strat_name}')
+        os.makedirs(models_path, exist_ok=True)
 
-            if os.path.exists(os.path.join(models_path, f'statistics{repeat}.json')):
-                print(f'statistics{repeat}.json already exists. Next')
-                continue
+        if os.path.exists(os.path.join(models_path, f'statistics{repeat}.json')):
+            print(f'statistics{repeat}.json already exists. Next')
+            return
 
-            print('Embeddings', config.model.emb_name)
-            emb = get_embeddings(config.model.emb_name)
+        print('Embeddings', config.model.emb_name)
+        emb = get_embeddings(config.model.emb_name)
 
-            tagger = SequenceTagger(hidden_size=config.model.hidden_size,
+        tagger = SequenceTagger(hidden_size=config.model.hidden_size,
                                     embeddings=emb(),
                                     tag_dictionary=tag_dictionary,
                                     tag_type=config.data.task,
                                     use_crf=True)
-            print(config.model.bayes)
-            if config.model.bayes:
-                print('BAYES CHOSEN')
-                convert_to_mc_dropout(tagger, (nn.Dropout, flair.nn.WordDropout, flair.nn.LockedDropout), option='flair')
-                active_tagger = LibActFlairBayes(tagger,
+        print(config.model.bayes)
+        if config.model.bayes:
+            print('BAYES CHOSEN')
+            convert_to_mc_dropout(tagger, (nn.Dropout, flair.nn.WordDropout, flair.nn.LockedDropout), option='flair')
+            active_tagger = LibActFlairBayes(tagger,
                                             base_path=models_path,
                                             reset_model_before_train=True,
                                             mini_batch_size=config.model.bs,
@@ -318,10 +314,10 @@ def run_experiment(config):
                                             max_epochs=config.model.n_epochs,
                                             min_learning_rate=config.model.min_lr)
                 
-                print(active_tagger)
+            print(active_tagger)
                 
-            else:
-                active_tagger = LibActFlair(tagger,
+        else:
+            active_tagger = LibActFlair(tagger,
                                             base_path=models_path,
                                             reset_model_before_train=True,
                                             mini_batch_size=config.model.bs,
@@ -332,48 +328,48 @@ def run_experiment(config):
                                             save_all_models=False,
                                             max_epochs=config.model.n_epochs,
                                             min_learning_rate=config.model.min_lr)
-            fit_model = False
+        fit_model = False
 
-        elif config.model.model_type == 'crf':
-            models_path = os.path.join(config.exp_path, model_name)
-            os.makedirs(models_path, exist_ok=True)
+    elif config.model.model_type == 'crf':
+        models_path = os.path.join(config.exp_path, model_name)
+        os.makedirs(models_path, exist_ok=True)
 
-            if os.path.exists(os.path.join(models_path, f'statistics{repeat}.json')):
-                print(f'statistics{repeat}.json already exists. Next')
-                continue
+        if os.path.exists(os.path.join(models_path, f'statistics{repeat}.json')):
+            print(f'statistics{repeat}.json already exists. Next')
+            return
 
-            active_tagger = LibActCrf(algorithm="lbfgs",
+        active_tagger = LibActCrf(algorithm="lbfgs",
                                       c1=0.1,
                                       c2=0.1,
                                       max_iterations=100,
                                       all_possible_transitions=True)
-            fit_model = True
+        fit_model = True
 
-        elif config.model.model_type == 'transformers':
+    elif config.model.model_type == 'transformers':
 
-            if config.model.bayes:
-                libactnn = LibActNNBayes
-                bayes_type = config.model.bayes_type
-            else:
-                libactnn = LibActNN
-                bayes_type = 'no_bayes'
+        if config.model.bayes:
+            libactnn = LibActNNBayes
+            bayes_type = config.model.bayes_type
+        else:
+            libactnn = LibActNN
+            bayes_type = 'no_bayes'
             
-            models_path=os.path.join(config.exp_path,f'{model_name}_{bayes_type}/{config.al.strat_name}')
-            print(models_path)
+        models_path=os.path.join(config.exp_path,f'{model_name}_{bayes_type}/{config.al.strat_name}')
+        print(models_path)
 
-            if os.path.exists(os.path.join(models_path, f'statistics{repeat}.json')):
-                print(f'statistics{repeat}.json already exists. Next')
-                continue
+        if os.path.exists(os.path.join(models_path, f'statistics{repeat}.json')):
+            print(f'statistics{repeat}.json already exists. Next')
+            return
 
-            index2tag = ['[PAD]'] + tag_dictionary.get_items()
-            tag2index = {e: i for i, e in enumerate(index2tag)}
-            active_tagger = create_libact_adaptor(tag2index, index2tag, LibActNN, config=config)
-            fit_model = False
+        index2tag = ['[PAD]'] + tag_dictionary.get_items()
+        tag2index = {e: i for i, e in enumerate(index2tag)}
+        active_tagger = create_libact_adaptor(tag2index, index2tag, LibActNN, config=config)
+        fit_model = False
 
-        active_learn_alg_ctor = make_libact_strategy_ctor(lambda tr_ds: strat(
+    active_learn_alg_ctor = make_libact_strategy_ctor(lambda tr_ds: strat(
             tr_ds, active_tagger), max_samples_number=config.al.max_samples_number)
 
-        active_learner = ActiveLearner(active_learn_alg_ctor=active_learn_alg_ctor,
+    active_learner = ActiveLearner(active_learn_alg_ctor=active_learn_alg_ctor,
                                        y_dtype='str',
                                        X_full_dataset=X_train,
                                        y_full_dataset=y_seed,
@@ -383,18 +379,48 @@ def run_experiment(config):
                                        eval_metrics=[f1_score],
                                        rnd_start_steps=0)
 
-        statistics = emulate_active_learning(y_train, active_learner,
+    statistics = emulate_active_learning(y_train, active_learner,
                                              max_iterations=config.al.n_iterations,
                                              fit_model=fit_model)
-        dump_file(statistics, models_path, f'statistics{repeat}.json')
+    dump_file(statistics, models_path, f'statistics{repeat}.json')
+        
 
 
 @hydra.main(config_path=os.environ['HYDRA_CONFIG_PATH'])
 def main(config):
     auto_generated_dir = os.getcwd()
     os.chdir(hydra.utils.get_original_cwd())
+    
+    multiprocessing.set_start_method('spawn')
 
-    run_experiment(config)
+    processes = []
+    n_processes = config.n_processes 
+
+    starttime = time.time()
+    i = 0
+    while i < config.n_repeats:
+        p = multiprocessing.Process(
+            target=run_experiment,
+            args=(
+                config,
+                i
+            )
+        )
+        processes.append(p)
+        print(processes)
+        p.start()
+        i += 1
+        if not (i % n_processes) and n_processes > 0:
+            for process in processes:
+                process.join()
+            processes = []
+
+    for process in processes:
+        process.join()
+    processes = []
+
+    print(f'Overall time for {config.n_repeats} repeats took {time.time() - starttime} seconds')
+
 
 
 if __name__ == "__main__":
