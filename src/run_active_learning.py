@@ -21,26 +21,27 @@ from bert_sequence_tagger.metrics import f1_entity_level
 
 from flair.data import Dictionary
 from flair.datasets import ColumnCorpus, ColumnDataset
-from flair.embeddings import ELMoEmbeddings, StackedEmbeddings, WordEmbeddings
+from flair.embeddings import ELMoEmbeddings, StackedEmbeddings, WordEmbeddings, FlairEmbeddings
 from flair.models import SequenceTagger
 from flair.trainers import ModelTrainer
 from flair.training_utils import EvaluationMetric
 from libact.query_strategies import RandomSampling, UncertaintySampling
+from active_learning_seq import RandomSamplingWithRetraining
 from pytorch_transformers import (AdamW, BertTokenizer, WarmupConstantSchedule,
                                   WarmupLinearSchedule)
 from seqeval.metrics import f1_score
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from al4ner.libact_crf import LibActCrf
-from al4ner.libact_flair import LibActFlair, PositiveLessCertain
+from al4ner.libact_flair import LibActFlair, PositiveLessCertain, LibActFlairBayes
 from al4ner.libact_nn import LibActNN, LibActNNBayes
 from al4ner.mc_dropout import convert_to_mc_dropout
+
 from vadim_ml.io import dump_file, load_file
 from vadim_ml.memoize import memoize
 
 #MIN_LEARNING_RATE = LEARNING_RATE / (2**4)
 #MAX_TO_ANNEAL = 3
-
 
 def load_task(data_folder, task, tag_column, preprocess):
     X = {'train': [], 'test': []}
@@ -168,6 +169,9 @@ def get_embeddings(emb_name):
         return lambda: ELMoEmbeddings(emb_name)  # pubmed
     elif emb_type == 'fasttext':
         return lambda: WordEmbeddings(emb_name)  # en
+    elif emb_type == 'flair':
+        return lambda: FlairEmbeddings(emb_name) # news-forward-fast
+
     else:
         raise ValueError('Wrong embedding type')
 
