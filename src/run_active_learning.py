@@ -268,9 +268,39 @@ def run_experiment(config):
     for repeat in range(config.n_repeats):
         print(f'######################==Repeat {repeat} ==#####################')
 
-        if config.model.model_type == 'flair':
+        strat = strategies_to_try(config.al.strat_name)
 
-            models_path = os.path.join(config.exp_path, f'{model_name}_{config.model.emb_name}')
+        model_name = config.model.model_type
+        
+        
+        
+        if config.al.percent:
+            print('FULL:', len(y_train))
+            y_seed = y_train2y_seed_percent(y_train)
+            selector = [False for _ in range(len(y_seed))]
+            for ind, answ in enumerate(y_seed):
+                if answ is None:
+                    selector[ind] = False
+                elif all(e is None for e in y_seed):
+                    selector[ind] = False
+                else:
+                    selector[ind] = True
+                
+            y_nonempty = np.array(y_seed)[selector]
+            print('2PERCENT:', len(y_nonempty))
+            max_samples_number = int(len(y_seed) * 0.02)
+             
+        else:
+            y_seed = y_train2y_seed(y_train)
+            max_samples_number = config.al.max_samples_number
+            
+        print('MAX_SAMPLES:', max_samples_number)
+
+        if 'flair' in config.model.model_type:
+            print(config.model.model_type)
+            
+            bayes_type = config.model.bayes_type if config.model.bayes else 'no_bayes'
+            models_path = os.path.join(config.exp_path, f'{model_name}_{config.model.emb_name}_{bayes_type}/{config.al.strat_name}')
             os.makedirs(models_path, exist_ok=True)
 
             if os.path.exists(os.path.join(models_path, f'statistics{repeat}.json')):
@@ -285,18 +315,36 @@ def run_experiment(config):
                                     tag_dictionary=tag_dictionary,
                                     tag_type=config.data.task,
                                     use_crf=True)
-
-            active_tagger = LibActFlair(tagger,
-                                        base_path=models_path,
-                                        reset_model_before_train=True,
-                                        mini_batch_size=config.model.bs,
-                                        eval_mini_batch_size=config.model.ebs,
-                                        checkpoint=False,
-                                        learning_rate=config.model.lr,
-                                        index_subset=False,
-                                        save_all_models=False,
-                                        max_epochs=config.model.max_epochs,
-                                        min_learning_rate=config.model.min_lr)
+            print(config.model.bayes)
+            if config.model.bayes:
+                print('BAYES CHOSEN')
+                convert_to_mc_dropout(tagger, (nn.Dropout, flair.nn.WordDropout, flair.nn.LockedDropout), option='flair')
+                active_tagger = LibActFlairBayes(tagger,
+                                            base_path=models_path,
+                                            reset_model_before_train=True,
+                                            mini_batch_size=config.model.bs,
+                                            eval_mini_batch_size=config.model.ebs,
+                                            checkpoint=False,
+                                            learning_rate=config.model.lr,
+                                            index_subset=False,
+                                            save_all_models=False,
+                                            max_epochs=config.model.n_epochs,
+                                            min_learning_rate=config.model.min_lr)
+                
+                print(active_tagger)
+                
+            else:
+                active_tagger = LibActFlair(tagger,
+                                            base_path=models_path,
+                                            reset_model_before_train=True,
+                                            mini_batch_size=config.model.bs,
+                                            eval_mini_batch_size=config.model.ebs,
+                                            checkpoint=False,
+                                            learning_rate=config.model.lr,
+                                            index_subset=False,
+                                            save_all_models=False,
+                                            max_epochs=config.model.n_epochs,
+                                            min_learning_rate=config.model.min_lr)
             fit_model = False
 
         elif config.model.model_type == 'crf':
