@@ -22,7 +22,7 @@ from al4ner.libact_crf import LibActCrf
 from al4ner.libact_nn import LibActNN
 
 from libact.query_strategies import UncertaintySampling, RandomSampling
-from active_learning_seq import RandomSamplingWithRetraining
+from al4ner.libact_nn import RandomSamplingWithRetraining
 from actleto import ActiveLearner, make_libact_strategy_ctor
 
 from vadim_ml.memoize import memoize
@@ -38,7 +38,6 @@ from bert_sequence_tagger.metrics import f1_entity_level
 
 from pytorch_transformers import BertTokenizer, AdamW, WarmupLinearSchedule, WarmupConstantSchedule
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-
 
 #MIN_LEARNING_RATE = LEARNING_RATE / (2**4)
 
