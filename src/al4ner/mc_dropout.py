@@ -98,7 +98,7 @@ def convert_to_mc_dropout(model: nn.Module, layers_to_substitute: Tuple[nn.Modul
                 convert_to_mc_dropout(layer)
 
 
-def activate_mc_dropout(model: nn.Module, activate: bool = True, if_custom_rate: bool = True,
+def activate_mc_dropout(model: nn.Module, activate: bool = True, if_custom_rate: bool = False,
                         custom_rate: float = 0.25, random: bool = False,
                         layers_to_activate: Tuple[nn.Module] = (WordDropoutMC, LockedDropoutMC),
                         verbose: bool = False, option='torch'):
