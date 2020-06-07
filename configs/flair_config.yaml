@@ -1,0 +1,15 @@
+cuda_devices: ''
+name: 'genia'
+hydra:
+  run:
+    dir: ./outputs-wee/${now:%Y-%m-%d}/${now:%H-%M-%S}
+model:
+    model_type: 'flair+bilstm_crf'
+    emb_name: 'fasttext'
+    bs: 32
+    ebs: 300
+data:
+    data_folder: '../data/genia'
+    pathology: 'genia'
+number_of_repeat: 5
+exp_path: '../workdir/experiments/hydra_debug'

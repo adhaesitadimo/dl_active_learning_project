@@ -1,0 +1,8 @@
+[submodule "packages/active_learning_toolbox"]
+	path = packages/active_learning_toolbox
+	url = https://github.com/IINemo/active_learning_toolbox.git
+	branch = seq
+[submodule "packages/libact"]
+	path = packages/libact
+	url = https://github.com/IINemo/libact.git
+	branch = seq

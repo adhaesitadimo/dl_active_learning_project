@@ -1,0 +1,25 @@
+cuda_devices: ''
+name: 'genia'
+hydra:
+  run:
+    dir: ../workdir/results/al/${now:%Y-%m-%d}/${now:%H-%M-%S}
+model:
+    model_type: 'flair'
+    emb_name: 'fasttext+en'
+    hidden_size: 128
+    max_epochs: 10
+    lr: 0.1
+    bs: 32
+    ebs: 300
+    min_lr: 0.00001
+data:
+    data_folder: '../workdir/data/'
+    task: 'conll2003'
+    tag_column: 3
+al:
+    strat_name: 'uncertainty'
+    n_iterations: 25
+    max_samples_number: 30
+n_repeats: 5
+cache_dir: '../workdir/cache'
+exp_path: '../workdir/experiments/hydra_debug'

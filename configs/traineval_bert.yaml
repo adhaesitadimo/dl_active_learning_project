@@ -1,0 +1,28 @@
+cuda_devices: ''
+hydra:
+  run:
+    dir: ${output_dir}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+model:
+    model_type: 'bert'
+    bs: 64
+    ebs: 64
+    n_epochs: 20
+    sched: 'plateau'
+    max_len: 150
+    lr: 5e-5
+    patience: 1
+    cache_dir: '../workdir/cache'
+    mixout: false
+    tokenizer: 'bert-base-cased'
+    bayes: false
+    bayes_type: 'mcd_all_layers'
+data:
+    data_folder: '../data/'
+    task: 'conll2003'
+    tag_column: 3
+al:
+    strat_name: 'uncertainty'
+    n_iterations: 50
+    max_samples_number: 100
+n_repeats: 5
+exp_path: '../workdir/experiments/hydra_debug'

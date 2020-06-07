@@ -1,0 +1,31 @@
+cuda_devices: ''
+name: 'conll'
+hydra:
+  run:
+    dir: ../workdir/results/al/${now:%Y-%m-%d}/${now:%H-%M-%S}
+model:
+    model_type: 'bert'
+    tokenizer_name: 'bert-base-uncased'
+    model_name: 'bert-base-uncased'
+    patience: 2
+    max_epochs: 10
+    lr: 5e-5
+    bs: 64
+    ebs: 64
+    min_lr: 1.25e-5
+    valid_ratio: 0.25
+    anneal_factor: 0.5
+    bayes: True
+    bayes_type: 'mcd_all_layers'
+data:
+    data_folder: '../data/'
+    task: 'conll2003'
+    tag_column: 3
+al:
+    strat_name: 'uncertainty'
+    n_iterations: 50
+    max_samples_number: 100
+    percent: False
+n_repeats: 5
+exp_path: '../workdir/experiments/hydra_debug'
+cache_dir: '../workdir/cache'
