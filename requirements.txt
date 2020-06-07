@@ -14,5 +14,6 @@ git+https://github.com/IINemo/libact.git@seq
 git+https://github.com/IINemo/active_learning_toolbox.git@seq
 git+https://github.com/IINemo/bert_sequence_tagger.git
 flair
-allennlp
+allennlp==1.0.0rc5
+allennlp-models==1.0.0rc5
 nltk
