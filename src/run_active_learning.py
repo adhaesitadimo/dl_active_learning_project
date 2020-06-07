@@ -31,8 +31,6 @@ from pytorch_transformers import (AdamW, BertTokenizer, WarmupConstantSchedule,
 from seqeval.metrics import f1_score
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from al4ner.exp_utils import entity_level_f1, train_dev_test_distr
-from al4ner.i2b2_utils import drop_noise_samples
 from al4ner.libact_crf import LibActCrf
 from al4ner.libact_flair import LibActFlair, PositiveLessCertain
 from al4ner.libact_nn import LibActNN, LibActNNBayes
