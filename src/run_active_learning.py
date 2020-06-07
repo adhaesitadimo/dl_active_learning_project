@@ -26,7 +26,7 @@ from flair.models import SequenceTagger
 from flair.trainers import ModelTrainer
 from flair.training_utils import EvaluationMetric
 from libact.query_strategies import RandomSampling, UncertaintySampling
-from active_learning_seq import RandomSamplingWithRetraining
+from al4ner.libact_nn import RandomSamplingWithRetraining
 from pytorch_transformers import (AdamW, BertTokenizer, WarmupConstantSchedule,
                                   WarmupLinearSchedule)
 from seqeval.metrics import f1_score
