@@ -19,6 +19,8 @@ To run the experiment in our setting you should write the config pass and the na
 Also, you can determine the desired cuda device (not the 0 one) before the config path:
 
     CUDA_VISIBLE_DEVICES=2 HYDRA_CONFIG_PATH='../configs/al_exp_bert.yaml' python run_active_learning.py
+
+You can enable multiprocessing via run_al_multiprocess.py. It works in the same way as run_active_learning.py. It will consume more RAM, please use it on your own risk!
     
 Scripts assume that you do not already have statistics for the experiment in the `experiments` directory.
 
