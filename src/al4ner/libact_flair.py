@@ -209,3 +209,24 @@ class LibActFlairBayes(LibActFlair):
         activate_mc_dropout(self._tagger, activate=True, verbose=True, if_custom_rate=False, option='flair')
         return tags
     
+    
+class PositiveLessCertain(ProbabilisticModel):
+    def __init__(self, model):
+        self._model = model
+
+    def predict_proba(self, X):
+        confidences, tags = self._model._predict_batches(X)
+        proba = [ [confidence if tag[0] == 'O' else confidence / 2
+                   for confidence, tag in zip(sentence_confidences, sentence_tags)]
+                 for sentence_confidences, sentence_tags in zip(confidences, tags)]
+        return np.array([np.mean(p) for p in proba]).reshape(-1, 1)
+
+    def predict(self, X):
+        return self._model.predict(X)
+
+    def score(self, X, y):
+        return self._model.score(X, y)
+
+    def train(self, libact_dataset, indexes=None):
+        print(f'indexes {indexes}')
+        return self._model.train(libact_dataset, indexes)
