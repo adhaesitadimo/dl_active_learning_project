@@ -17,9 +17,9 @@ from seqeval.metrics import f1_score
 from pathlib import Path
 import nltk
 
-from libact_flair import LibActFlair, PositiveLessCertain, LibActFlairBayes
-from libact_crf import LibActCrf
-from libact_nn import LibActNN
+from al4ner.libact_flair import LibActFlair, PositiveLessCertain, LibActFlairBayes
+from al4ner.libact_crf import LibActCrf
+from al4ner.libact_nn import LibActNN
 
 from libact.query_strategies import UncertaintySampling, RandomSampling
 from active_learning_seq import RandomSamplingWithRetraining
@@ -32,8 +32,7 @@ from vadim_ml.io import load_file, dump_file
 from flair.datasets import ColumnCorpus, ColumnDataset
 from torch import nn
 
-from mc_dropout import convert_to_mc_dropout, DropoutMC
-#from mc_dropout_flair import convert_to_mc_dropout, DropoutMC
+from al4ner.mc_dropout import convert_to_mc_dropout, DropoutMC
 from bert_sequence_tagger import SequenceTaggerBert, BertForTokenClassificationCustom, ModelTrainerBert
 from bert_sequence_tagger.bert_utils import get_parameters_without_decay
 from bert_sequence_tagger.metrics import f1_entity_level
