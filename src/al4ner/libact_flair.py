@@ -6,6 +6,7 @@ from flair.models.sequence_tagger_model import START_TAG, STOP_TAG, argmax
 from flair.data import Sentence, Corpus, Label
 #from flair.trainers import ModelTrainer
 from .trainer_flair import ModelTrainer as ModelTrainerFlair
+from .mc_dropout import activate_mc_dropout, DropoutMC
 
 import torch
 import torch.nn.functional as F
@@ -154,24 +155,57 @@ class LibActFlair(ProbabilisticModel):
         return model_trainer.train(base_path=train_path, **self._train_args)
 
     
-class PositiveLessCertain(ProbabilisticModel):
-    def __init__(self, model):
-        self._model = model
-    
+class LibActFlairBayes(LibActFlair):
+    """An adapter for training Flair SequenceTagger with libact using Monte Carlo dropout.
+       X is a corpus of tokenized sentences.
+       y is a corpus of BIO sequences"""
+    def __init__(self, tagger, base_path, mini_batch_size=32, eval_mini_batch_size=512,
+                 reset_model_before_train=False, index_subset=True,
+                 n_estimators=10, save_all_models = False, **train_args):
+        self._tagger = tagger
+        self._index_subset = index_subset
+        self._mini_batch_size = mini_batch_size
+        self._eval_mini_batch_size = eval_mini_batch_size
+        self._base_path = base_path
+        self._train_args = train_args
+        self._train_args['mini_batch_size'] = mini_batch_size
+        self._save_all_models = save_all_models
+
+        self._start_state = tagger.state_dict() if reset_model_before_train else None
+        self._n_estimators = n_estimators
+
     def predict_proba(self, X):
-        confidences, tags = self._model._predict_batches(X)
-        proba = [ [confidence if tag[0] == 'O' else confidence / 2 
-                   for confidence, tag in zip(sentence_confidences, sentence_tags)]
-                 for sentence_confidences, sentence_tags in zip(confidences, tags)]
-        return np.array([np.mean(p) for p in proba]).reshape(-1, 1)
+        print('PREDICT PROBA FOR BAYES')
+        torch.cuda.empty_cache()
+        self._tagger.eval()
+        print("ACTIVATING MC DROPOUT")
+        activate_mc_dropout(self._tagger, activate=True, verbose=True, option='flair')
+
+        ens_tags = []
+        for i in range(self._n_estimators):
+            tags, values = self._predict_batches(X)
+            tags = [np.array(item, dtype=object) for item in tags]
+            ens_tags.append(tags)
+
+        # sort metric proposed by Shen et al, 2018
+        stacked_ans = [np.stack(item) for item in np.stack(ens_tags, -1)]
+        # stacked_ans_result = [[find_most_common(row, 'elem') for row in ans.T] for ans in stacked_ans]
+        stacked_ans_values = np.array([
+            np.mean([find_most_common(row, 'count') / self._n_estimators for row in ans.T]) for ans in stacked_ans
+        ])
+
+        # deactivate mc dropout
+        print("DEACTIVATING MC DROPOUT")
+        activate_mc_dropout(self._tagger, activate=False, verbose=True, option='flair')
+
+        return stacked_ans_values.reshape(-1, 1)
 
     def predict(self, X):
-        return self._model.predict(X)
-
-    def score(self, X, y):
-        return self._model.score(X, y)
-
-    def train(self, libact_dataset, indexes=None):
-        print(f'indexes {indexes}')
-        return self._model.train(libact_dataset, indexes)
+        print('PREDICT FOR BAYES')
+        print("DEACTIVATING MC DROPOUT")
+        activate_mc_dropout(self._tagger, activate=False, verbose=True, if_custom_rate=False, option='flair')
+        confidences, tags = self._predict_batches(X)
+        print("ACTIVATING MC DROPOUT")
+        activate_mc_dropout(self._tagger, activate=True, verbose=True, if_custom_rate=False, option='flair')
+        return tags
     
