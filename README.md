@@ -6,6 +6,7 @@ Deep neural models for active learning in the sequence tagging tasks
 - `experiments` -- scores, that we got after experimenting with different models and strategies. Each result folder consists
 of several runs in order to provide the variance estimation
 - `src` -- main scripts to run experiments on your own
+- `configs` -- main files with paramethers to run the experiments
 
 ## Running example
 
