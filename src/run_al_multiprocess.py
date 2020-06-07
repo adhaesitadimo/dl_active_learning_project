@@ -28,7 +28,6 @@ from actleto import ActiveLearner, make_libact_strategy_ctor
 from vadim_ml.memoize import memoize
 from vadim_ml.io import load_file, dump_file
 
-
 from flair.datasets import ColumnCorpus, ColumnDataset
 from torch import nn
 
